@@ -20,6 +20,7 @@ void sdSetup() {
 
 bool sdFindNextFile(char* out, size_t maxLen, const char* currentFile, bool backwards) {
   bool fileFound = false;
+  bool rewindDone = false;
   char prevFile[256] = {0};
 
   File root = SD.open("/");
@@ -32,8 +33,15 @@ bool sdFindNextFile(char* out, size_t maxLen, const char* currentFile, bool back
     File entry = root.openNextFile();
 
     if (!entry) {
-      Serial.println("[sdcard] no more files");
-      break;
+      if (rewindDone) { 
+        Serial.println("[sdcard] no more files");
+        break;
+      }
+
+      root.rewindDirectory();
+      currentFile = ""; // start on first file
+      rewindDone = true; // don't allow infinite loop
+      continue; // restart search
     }
 
     if (entry.isDirectory()) { entry.close(); continue; }
