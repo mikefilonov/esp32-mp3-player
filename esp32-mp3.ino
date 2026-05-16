@@ -1,7 +1,7 @@
 #ifdef CORE_DEBUG_LEVEL
 #undef CORE_DEBUG_LEVEL
 #endif
-#define CORE_DEBUG_LEVEL 3
+#define CORE_DEBUG_LEVEL 0
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 
 #include <Arduino.h>
@@ -16,14 +16,16 @@
 Mp3PlayerController ctr;
 
 void setup() {
-  Serial.begin(115200);
-  audioLogger = &Serial;
+  // Serial.begin(115200);
+  // audioLogger = &Serial;
+
+  std::vector<const char*> btNames = {"Beats Solo 4", "Headphones 01", "NR-103"};
 
   sdSetup();
-  playerInit("NR-103", &ctr);       // configure BT, don't start yet
+  playerInit(&ctr);       // configure BT, don't start yet
   btNavigationSetup(getA2DPSource(), &ctr); // register AVRC callback before start
   navigationSetup();
-  playerStart();                     // now start BT with all callbacks in place
+  playerStart(btNames);                     // now start BT with all callbacks in place
 }
 
 void loop() {

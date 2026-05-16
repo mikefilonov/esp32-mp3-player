@@ -64,13 +64,12 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
-static const char* btDeviceName = nullptr;
-
-void playerInit(const char* bt_device_name, PlayerEvents* events) {
+void playerInit(PlayerEvents* events) {
   playerEvents = events;
-  btDeviceName = bt_device_name;
 
   a2dp_source.set_auto_reconnect(true);
+
+  a2dp_source.set_data_callback_in_frames(get_sound_data);
 
   a2dp_source.set_on_connection_state_changed([](esp_a2d_connection_state_t state, void*) {
     if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
@@ -85,8 +84,8 @@ void playerInit(const char* bt_device_name, PlayerEvents* events) {
   });
 }
 
-void playerStart() {
-  a2dp_source.start(btDeviceName, get_sound_data);
+void playerStart(std::vector<const char *> names) {
+  a2dp_source.start(names);
   Serial.println("[player] A2DP started");
 }
 

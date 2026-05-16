@@ -11,8 +11,8 @@ class PlayerEvents {
     virtual void onBTDisconnected() = 0;
 };
 
-void playerInit(const char* bt_device_name, PlayerEvents* events);
-void playerStart(); // call after all BT callbacks are registered
+void playerInit(PlayerEvents* events);
+void playerStart(std::vector<const char *> names); // call after all BT callbacks are registered
 void playerLoop();
 
 void playerStartFile(const char* path);
