@@ -67,7 +67,7 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
 void playerInit(PlayerEvents* events) {
   playerEvents = events;
 
-  a2dp_source.set_auto_reconnect(true);
+  a2dp_source.set_auto_reconnect(false);
 
   a2dp_source.set_data_callback_in_frames(get_sound_data);
 
