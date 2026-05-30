@@ -30,6 +30,7 @@ class Mp3PlayerController :
       if (sdFindNextFile(nextFile, sizeof(nextFile), currentFile)) {
         strncpy(currentFile, nextFile, sizeof(currentFile) - 1);
         playerStartFile(currentFile);
+        navigationSetLedColor(0, 255, 0); // Green when playing
       }
     }
 
@@ -38,6 +39,7 @@ class Mp3PlayerController :
       if (sdFindNextFile(prevFile, sizeof(prevFile), currentFile, /*backwards=*/true)) {
         strncpy(currentFile, prevFile, sizeof(currentFile) - 1);
         playerStartFile(currentFile);
+        navigationSetLedColor(0, 255, 0); // Green when playing
       }
     }
 
@@ -48,9 +50,16 @@ class Mp3PlayerController :
         }
         if (strnlen(currentFile, sizeof(currentFile)) > 0) {
           playerStartFile(currentFile);
+          navigationSetLedColor(0, 255, 0); // Green when playing
         }
       } else {
-        playerPause(!playerIsPaused());
+        bool nextPaused = !playerIsPaused();
+        playerPause(nextPaused);
+        if (nextPaused) {
+          navigationSetLedColor(255, 128, 0); // Orange when paused
+        } else {
+          navigationSetLedColor(0, 255, 0);   // Green when playing
+        }
       }
     }
 
@@ -76,6 +85,7 @@ class Mp3PlayerController :
           break;
         case ControllerAction::STOP:
           playerStop();
+          navigationSetLedColor(255, 0, 0); // Red when stopped
           break;
         default: break;
       }
@@ -126,6 +136,8 @@ class Mp3PlayerController :
     void onBTDisconnected() override {
       Serial.println("[ctrl] BT disconnected");
       pendingAction = ControllerAction::STOP;
+      navigationSetLedColor(0, 0, 255); // Blue when BT is disconnected
     }
 
 };
+

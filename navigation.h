@@ -14,3 +14,5 @@ class NavigationController {
 
 void navigationSetup();
 void navigationLoop(NavigationController* ctr);
+void navigationSetLedColor(uint8_t r, uint8_t g, uint8_t b);
+
