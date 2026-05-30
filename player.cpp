@@ -67,9 +67,12 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
 void playerInit(PlayerEvents* events) {
   playerEvents = events;
 
-  a2dp_source.set_auto_reconnect(false);
+  a2dp_source.set_auto_reconnect(true);
 
   a2dp_source.set_data_callback_in_frames(get_sound_data);
+
+
+  a2dp_source.clean_last_connection();
 
   a2dp_source.set_on_connection_state_changed([](esp_a2d_connection_state_t state, void*) {
     if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {

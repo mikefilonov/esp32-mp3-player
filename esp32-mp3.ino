@@ -19,7 +19,7 @@ void setup() {
   // Serial.begin(115200);
   // audioLogger = &Serial;
 
-  std::vector<const char*> btNames = {"Beats Solo 4", "Headphones 01", "NR-103"};
+  std::vector<const char*> btNames = {"Beats Solo 4", "Headphones 01", "RX-V385 Yamaha", "NR-103"};
 
   sdSetup();
   playerInit(&ctr);       // configure BT, don't start yet
