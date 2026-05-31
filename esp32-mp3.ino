@@ -53,5 +53,5 @@ void loop() {
   ctr.loop();          // dispatch any pending action on the main task
   navigationLoop(&ctr);
   playerLoop();
-  delay(50);
+  delay(5);
 }

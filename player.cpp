@@ -1,5 +1,6 @@
 #include "player.h"
 #include <Arduino.h>
+#include <Preferences.h>
 
 
 // ── Ring buffer ───────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ static PlayerEvents*    playerEvents  = nullptr;
 static volatile bool    bt_connected  = false;
 static bool             paused        = false;
 static volatile uint8_t currentVolume = 64; // initialized to mid-range (50%) to prevent startup jumps
+static Preferences preferences;
+static bool volumeSyncedToSpeaker = false;
 
 // ── A2DP data callback — runs on BT task, must not block ─────────────────────
 static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
@@ -83,6 +86,12 @@ bool playerInit(PlayerEvents* events, bool pairingModeRequested) {
   a2dp_source.set_auto_reconnect(true);
   a2dp_source.get_last_connection();
 
+  // Restore volume from NVS preferences
+  preferences.begin("mp3player", false);
+  currentVolume = preferences.getUChar("volume", 64);
+  preferences.end();
+  Serial.printf("[player] NVS Restored volume: %d\n", currentVolume);
+
   bool noLastConnection = !a2dp_source.has_last_connection();
   bool activePairing = pairingModeRequested || noLastConnection;
 
@@ -103,6 +112,7 @@ bool playerInit(PlayerEvents* events, bool pairingModeRequested) {
     } else {
       Serial.println("[player] BT disconnected");
       bt_connected = false;
+      volumeSyncedToSpeaker = false; // Reset sync flag on disconnect
       if (playerEvents) playerEvents->onBTDisconnected();
     }
   });
@@ -179,18 +189,37 @@ bool playerIsConnected() {
   return bt_connected;
 }
 
+static void saveVolumeToNVS(uint8_t vol) {
+  preferences.begin("mp3player", false);
+  preferences.putUChar("volume", vol);
+  preferences.end();
+  Serial.printf("[player] NVS Saved volume: %d\n", vol);
+}
+
 // Called by bt_navigation when the device reports a volume change.
 // Just tracks the value so the controller can read it for Up/Down increments.
 void playerUpdateVolume(uint8_t volume_0_127) {
-  currentVolume = volume_0_127;
+  if (!volumeSyncedToSpeaker) {
+    // Ignore initial speaker volume reports until we successfully push our NVS restored volume
+    Serial.printf("[player] Ignored initial speaker volume report of %d to protect NVS restored state\n", volume_0_127);
+    return;
+  }
+  if (currentVolume != volume_0_127) {
+    currentVolume = volume_0_127;
+    saveVolumeToNVS(volume_0_127);
+  }
 }
 
 // Called by physical buttons via the controller.
 // Sends an AVRC "set absolute volume" command to the device — the device's
 // hardware DAC applies it. No PCM scaling on our side.
 void playerSetVolume(uint8_t volume_0_127) {
-  currentVolume = volume_0_127;
+  if (currentVolume != volume_0_127 || !volumeSyncedToSpeaker) {
+    currentVolume = volume_0_127;
+    saveVolumeToNVS(volume_0_127);
+  }
   esp_avrc_ct_send_set_absolute_volume_cmd(1 /*TL_RN_VOLUME_CHANGE*/, volume_0_127);
+  volumeSyncedToSpeaker = true; // We successfully synchronized our NVS volume to the speaker!
   Serial.printf("[player] set volume: %d\n", volume_0_127);
 }
 

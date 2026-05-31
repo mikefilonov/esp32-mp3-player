@@ -186,6 +186,9 @@ class Mp3PlayerController :
       Serial.println("[ctrl] BT connected — starting first track");
       pendingAction = ControllerAction::NEXT;
       pairingModeActive = false; // Successfully connected, clear pairing mode
+
+      // Sync NVS-restored volume to the speaker immediately
+      playerSetVolume(playerGetVolume());
     }
 
     void onBTDisconnected() override {
