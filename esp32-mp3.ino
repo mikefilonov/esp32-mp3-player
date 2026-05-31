@@ -21,9 +21,9 @@
 Mp3PlayerController ctr;
 
 void setup() {
-  Serial.begin(9600);
-  while (!Serial) delay(10); // Wait for serial port to connect
-  audioLogger = &Serial;
+  // Serial.begin(9600);
+  // while (!Serial) delay(10); // Wait for serial port to connect
+  // audioLogger = &Serial;
 
   // needed for bt last connection read
   esp_err_t err = nvs_flash_init();
