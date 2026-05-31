@@ -137,4 +137,4 @@ Contributions, bug reports, and pull requests are welcome! If you have suggestio
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the standard license details for more information.
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](file:///Users/mikefilonov/Documents/Arduino/esp32-mp3/LICENSE) file for more information.
