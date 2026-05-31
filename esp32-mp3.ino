@@ -20,6 +20,9 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+// Set to 1 to enable Serial diagnostics & plotter telemetry, or 0 to completely disable both
+#define ENABLE_DIAGNOSTICS 1
+
 #include "sdcard.h"
 #include "player.h"
 #include "navigation.h"
@@ -29,9 +32,11 @@
 Mp3PlayerController ctr;
 
 void setup() {
-  // Serial.begin(9600);
-  // while (!Serial) delay(10); // Wait for serial port to connect
-  // audioLogger = &Serial;
+#if ENABLE_DIAGNOSTICS
+  Serial.begin(9600);
+  while (!Serial) delay(10); // Wait for serial port to connect
+  audioLogger = &Serial;
+#endif
 
   // needed for bt last connection read
   esp_err_t err = nvs_flash_init();
@@ -60,5 +65,19 @@ void loop() {
   ctr.loop();          // dispatch any pending action on the main task
   navigationLoop(&ctr);
   playerLoop();
+
+#if ENABLE_DIAGNOSTICS
+  // Print memory diagnostics every 1 second to plot real-time memory health in the Arduino IDE Serial Plotter
+  static unsigned long lastMemLog = 0;
+  unsigned long now = millis();
+  if (now - lastMemLog >= 1000) {
+    lastMemLog = now;
+    Serial.printf("FreeHeap:%d MinFreeHeap:%d MaxAllocHeap:%d\n", 
+                  (int)ESP.getFreeHeap(), 
+                  (int)ESP.getMinFreeHeap(), 
+                  (int)ESP.getMaxAllocHeap());
+  }
+#endif
+
   delay(5);
 }
