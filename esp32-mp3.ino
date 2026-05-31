@@ -42,6 +42,7 @@ void setup() {
     Serial.println("[setup] Normal boot mode — Setting NeoPixel to Blue");
     navigationSetLedColor(0, 0, 255);       // Blue for Normal Boot (reconnecting)
   }
+  ctr.setPairingModeActive(activePairing);  // Notify controller of pairing status to lock boot-up color
   nvs_flash_deinit();
   btNavigationSetup(getA2DPSource(), &ctr); // register AVRC callback before start
 

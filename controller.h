@@ -27,6 +27,7 @@ class Mp3PlayerController :
 
     unsigned long lastSdCheck   = 0;
     bool          wasSdPresent  = false;
+    bool          pairingModeActive = false;
 
     void doNext() {
       char nextFile[256] = {0};
@@ -67,6 +68,9 @@ class Mp3PlayerController :
     }
 
   public:
+    void setPairingModeActive(bool active) {
+      pairingModeActive = active;
+    }
 
     // ── Call from Arduino loop() — executes any pending action on the main task
     void loop() {
@@ -83,7 +87,12 @@ class Mp3PlayerController :
             if (playerIsConnected()) {
               pendingAction = ControllerAction::PLAY_PAUSE;
             } else {
-              navigationSetLedColor(0, 0, 255); // Back to Blue if BT is still disconnected
+              // Revert to Blue if BT is disconnected, UNLESS we are in pairing mode (Purple)
+              if (pairingModeActive) {
+                navigationSetLedColor(255, 0, 255); // Keep it Purple for pairing
+              } else {
+                navigationSetLedColor(0, 0, 255);   // Blue for normal reconnecting
+              }
             }
           } else {
             Serial.println("[ctrl] SD card removed!");
@@ -175,6 +184,7 @@ class Mp3PlayerController :
     void onBTConnected() override {
       Serial.println("[ctrl] BT connected — starting first track");
       pendingAction = ControllerAction::NEXT;
+      pairingModeActive = false; // Successfully connected, clear pairing mode
     }
 
     void onBTDisconnected() override {
