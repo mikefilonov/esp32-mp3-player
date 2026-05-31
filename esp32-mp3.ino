@@ -21,9 +21,9 @@
 Mp3PlayerController ctr;
 
 void setup() {
-  // Serial.begin(9600);
-  // while (!Serial) delay(10); // Wait for serial port to connect
-  // audioLogger = &Serial;
+  Serial.begin(9600);
+  while (!Serial) delay(10); // Wait for serial port to connect
+  audioLogger = &Serial;
 
   std::vector<const char*> btNames = {"Beats Solo 4", "Headphones 01", "RX-V385 Yamaha", "NR-103"};
 

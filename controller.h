@@ -25,6 +25,9 @@ class Mp3PlayerController :
     uint8_t  currentVolume    = 64; // 0–127
     volatile ControllerAction pendingAction = ControllerAction::NONE;
 
+    unsigned long lastSdCheck   = 0;
+    bool          wasSdPresent  = false;
+
     void doNext() {
       char nextFile[256] = {0};
       if (sdFindNextFile(nextFile, sizeof(nextFile), currentFile)) {
@@ -67,6 +70,31 @@ class Mp3PlayerController :
 
     // ── Call from Arduino loop() — executes any pending action on the main task
     void loop() {
+      // 1. Periodically check SD card status
+      unsigned long now = millis();
+      if (now - lastSdCheck >= 1000 || lastSdCheck == 0) {
+        lastSdCheck = now;
+        bool isSdPresent = sdCheckConnection();
+        if (isSdPresent != wasSdPresent) {
+          wasSdPresent = isSdPresent;
+          if (isSdPresent) {
+            Serial.println("[ctrl] SD card inserted!");
+            // Auto start playback if Bluetooth is already connected
+            if (playerIsConnected()) {
+              pendingAction = ControllerAction::PLAY_PAUSE;
+            } else {
+              navigationSetLedColor(0, 0, 255); // Back to Blue if BT is still disconnected
+            }
+          } else {
+            Serial.println("[ctrl] SD card removed!");
+            playerStop();
+            memset(currentFile, 0, sizeof(currentFile)); // Clear old filename!
+            navigationSetLedColor(255, 255, 0);          // Yellow indicating missing storage
+          }
+        }
+      }
+
+      // 2. Dispatch pending actions
       ControllerAction action = pendingAction;
       if (action == ControllerAction::NONE) return;
       pendingAction = ControllerAction::NONE;
@@ -74,6 +102,12 @@ class Mp3PlayerController :
       // Disable any media/playback/volume navigation until a connection is established
       if (action != ControllerAction::STOP && !playerIsConnected()) {
         Serial.println("[ctrl] Action ignored — waiting for Bluetooth connection...");
+        return;
+      }
+
+      // Disable playback navigation if SD card is not present
+      if (action != ControllerAction::STOP && !wasSdPresent) {
+        Serial.println("[ctrl] Action ignored — SD card not present");
         return;
       }
 
@@ -91,7 +125,11 @@ class Mp3PlayerController :
           break;
         case ControllerAction::STOP:
           playerStop();
-          navigationSetLedColor(255, 0, 0); // Red when stopped
+          if (!playerIsConnected()) {
+            navigationSetLedColor(0, 0, 255); // Keep it Blue when disconnected/reconnecting
+          } else {
+            navigationSetLedColor(255, 0, 0); // Red when stopped but connected
+          }
           break;
         default: break;
       }

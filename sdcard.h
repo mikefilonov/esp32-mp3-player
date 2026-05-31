@@ -9,3 +9,4 @@
 bool sdFindNextFile(char* out, size_t maxLen, const char* currentFile, bool backwards = false);
 
 void sdSetup();
+bool sdCheckConnection();

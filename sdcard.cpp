@@ -10,12 +10,38 @@ static bool isMP3File(const char* name) {
   return (strcasecmp(ext, ".mp3") == 0);
 }
 
+static bool sd_ok = false;
+
 void sdSetup() {
-  while (!SD.begin(SD_CS_PIN)) {
-    Serial.println("[sdcard] mount failed, retrying...");
-    delay(3000);
+  Serial.println("[sdcard] Initializing SD Card...");
+  sd_ok = SD.begin(SD_CS_PIN);
+  if (sd_ok) {
+    Serial.println("[sdcard] SD Card detected and mounted successfully.");
+  } else {
+    Serial.println("[sdcard] SD Card not present at boot.");
   }
-  Serial.println("[sdcard] SD OK");
+}
+
+bool sdCheckConnection() {
+  if (sd_ok) {
+    // Perform a quick read check to verify card hasn't been removed
+    File root = SD.open("/");
+    if (root) {
+      root.close();
+      return true;
+    }
+    // If opening root fails, the card was pulled out
+    Serial.println("[sdcard] SD Card disconnected!");
+    SD.end();
+    sd_ok = false;
+  }
+
+  // Attempt to re-initialize SD card
+  sd_ok = SD.begin(SD_CS_PIN);
+  if (sd_ok) {
+    Serial.println("[sdcard] SD Card reconnected!");
+  }
+  return sd_ok;
 }
 
 bool sdFindNextFile(char* out, size_t maxLen, const char* currentFile, bool backwards) {
