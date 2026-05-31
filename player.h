@@ -20,6 +20,7 @@ void playerStop();
 void playerPause(bool paused);
 bool playerIsStopped();
 bool playerIsPaused();
+bool playerIsConnected();
 void playerSetVolume(uint8_t volume_0_127);   // physical buttons — goes via a2dp_source
 void playerUpdateVolume(uint8_t volume_0_127); // bt_navigation only — skips a2dp_source
 uint8_t playerGetVolume();

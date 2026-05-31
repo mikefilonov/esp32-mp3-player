@@ -71,6 +71,12 @@ class Mp3PlayerController :
       if (action == ControllerAction::NONE) return;
       pendingAction = ControllerAction::NONE;
 
+      // Disable any media/playback/volume navigation until a connection is established
+      if (action != ControllerAction::STOP && !playerIsConnected()) {
+        Serial.println("[ctrl] Action ignored — waiting for Bluetooth connection...");
+        return;
+      }
+
       switch (action) {
         case ControllerAction::NEXT:       doNext();     break;
         case ControllerAction::PREV:       doPrev();     break;

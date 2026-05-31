@@ -165,6 +165,10 @@ bool playerIsPaused() {
   return paused;
 }
 
+bool playerIsConnected() {
+  return bt_connected;
+}
+
 // Called by bt_navigation when the device reports a volume change.
 // Just tracks the value so the controller can read it for Up/Down increments.
 void playerUpdateVolume(uint8_t volume_0_127) {
