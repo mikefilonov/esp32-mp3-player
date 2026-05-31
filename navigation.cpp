@@ -24,6 +24,7 @@
 #define SS_SWITCH        24
 #define SS_NEOPIX        6
 #define SEESAW_ADDR      0x36
+#define SEESAW_INT_PIN   4  // ESP32 GPIO 4 connected to Seesaw INT
 
 static Adafruit_seesaw ss;
 static seesaw_NeoPixel sspixel = seesaw_NeoPixel(1, SS_NEOPIX, NEO_GRB + NEO_KHZ800);
@@ -33,16 +34,28 @@ static bool lastSeesawBtn = false;
 static bool wasRotatedWhilePressed = false;
 
 void navigationSetup() {
+  // Configure the ESP32 INT pin as input with internal pull-up
+  pinMode(SEESAW_INT_PIN, INPUT_PULLUP);
+
   // Try to initialize Seesaw I2C encoder
   Serial.println("[navigation] Initializing Seesaw Rotary Encoder...");
   if (ss.begin(SEESAW_ADDR) && sspixel.begin(SEESAW_ADDR)) {
     Serial.println("[navigation] Seesaw started successfully!");
+    
+    // Boost I2C bus speed to Fast Mode (400 kHz)
+    Wire.setClock(400000);
+
     sspixel.setBrightness(255);
     // Blue for initial state (BT disconnected)
     sspixel.setPixelColor(0, sspixel.Color(0, 0, 255));
     sspixel.show();
     
     ss.pinMode(SS_SWITCH, INPUT_PULLUP);
+
+    // Enable hardware interrupts on the Seesaw chip for the switch and the encoder
+    ss.setGPIOInterrupts((uint32_t)1 << SS_SWITCH, true);
+    ss.enableEncoderInterrupt();
+
     lastSeesawPos = ss.getEncoderPosition();
     lastSeesawBtn = !ss.digitalRead(SS_SWITCH);
     ss_ok = true;
@@ -56,6 +69,12 @@ void navigationSetup() {
 
 void navigationLoop(NavigationController* ctr) {
   if (!ss_ok) return;
+
+  // Exit instantly if Seesaw INT pin is HIGH (no physical movement/interaction)
+  // This drops idle I2C traffic to 0% and saves massive CPU cycles!
+  if (digitalRead(SEESAW_INT_PIN) == HIGH) {
+    return;
+  }
 
   // 1. Read button state (active low on Seesaw)
   bool isPressed = !ss.digitalRead(SS_SWITCH);

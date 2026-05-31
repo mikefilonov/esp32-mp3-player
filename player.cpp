@@ -22,7 +22,7 @@
 
 
 // ── Ring buffer ───────────────────────────────────────────────────────────────
-#define RING_BUF_SAMPLES 8192
+#define RING_BUF_SAMPLES 4096
 static int16_t  ring[RING_BUF_SAMPLES];
 static volatile int ring_write = 0;
 static volatile int ring_read  = 0;
@@ -145,10 +145,16 @@ void playerStart() {
 
 void playerLoop() {
   if (mp3 && mp3->isRunning()) {
-    if (!mp3->loop()) {
-      mp3->stop();
-      Serial.println("[player] track finished");
-      if (playerEvents) playerEvents->onTrackFinished();
+    // Fill the ring buffer to maximum capacity in a single pass to absorb system latencies.
+    // We keep decoding as long as there is space for more samples in the buffer.
+    while (ring_available() < RING_BUF_SAMPLES - 512) {
+      if (!mp3->loop()) {
+        mp3->stop();
+        Serial.println("[player] track finished");
+        if (playerEvents) playerEvents->onTrackFinished();
+        break;
+      }
+      yield(); // Yield to feed watchdog and allow other tasks to run
     }
   }
 }
@@ -171,6 +177,7 @@ void playerStartFile(const char* path) {
     Serial.println("[player] mp3->begin() failed");
     delete mp3;  mp3  = nullptr;
     delete file; file = nullptr;
+    delete ringOut; ringOut = nullptr; // Fix memory leak
     return;
   }
 

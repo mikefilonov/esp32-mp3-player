@@ -95,7 +95,12 @@ class Mp3PlayerController :
       unsigned long now = millis();
       if (now - lastSdCheck >= 1000 || lastSdCheck == 0) {
         lastSdCheck = now;
-        bool isSdPresent = sdCheckConnection();
+        // Avoid slow SPI directory access during active playback to prevent audio stuttering.
+        // If the card is pulled out while playing, the decoder's next read will fail, stopping the player.
+        bool isSdPresent = wasSdPresent;
+        if (playerIsStopped() || playerIsPaused()) {
+          isSdPresent = sdCheckConnection();
+        }
         if (isSdPresent != wasSdPresent) {
           wasSdPresent = isSdPresent;
           if (isSdPresent) {

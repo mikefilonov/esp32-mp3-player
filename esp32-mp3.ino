@@ -16,19 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifdef CORE_DEBUG_LEVEL
-#undef CORE_DEBUG_LEVEL
-#endif
-#define CORE_DEBUG_LEVEL 0
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
-
 #include <Arduino.h>
-#include "esp32-hal-log.h"
-
 #include "nvs.h"
 #include "nvs_flash.h"
-
-
 
 #include "sdcard.h"
 #include "player.h"
@@ -61,7 +51,6 @@ void setup() {
     navigationSetLedColor(0, 0, 255);       // Blue for Normal Boot (reconnecting)
   }
   ctr.setPairingModeActive(activePairing);  // Notify controller of pairing status to lock boot-up color
-  nvs_flash_deinit();
   btNavigationSetup(getA2DPSource(), &ctr); // register AVRC callback before start
 
   playerStart();                            // now start BT with generic open pairing
