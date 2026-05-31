@@ -22,7 +22,6 @@ class Mp3PlayerController :
 
   protected:
     char     currentFile[256] = {0};
-    uint8_t  currentVolume    = 64; // 0–127
     volatile ControllerAction pendingAction = ControllerAction::NONE;
 
     unsigned long lastSdCheck   = 0;
@@ -124,14 +123,16 @@ class Mp3PlayerController :
         case ControllerAction::NEXT:       doNext();     break;
         case ControllerAction::PREV:       doPrev();     break;
         case ControllerAction::PLAY_PAUSE: doPlayPause(); break;
-        case ControllerAction::VOL_UP:
-          currentVolume = (uint8_t)min(127, (int)playerGetVolume() + 8);
-          playerSetVolume(currentVolume);
+        case ControllerAction::VOL_UP: {
+          uint8_t newVol = (uint8_t)min(127, (int)playerGetVolume() + 8);
+          playerSetVolume(newVol);
           break;
-        case ControllerAction::VOL_DOWN:
-          currentVolume = (uint8_t)max(0, (int)playerGetVolume() - 8);
-          playerSetVolume(currentVolume);
+        }
+        case ControllerAction::VOL_DOWN: {
+          uint8_t newVol = (uint8_t)max(0, (int)playerGetVolume() - 8);
+          playerSetVolume(newVol);
           break;
+        }
         case ControllerAction::STOP:
           playerStop();
           if (!playerIsConnected()) {

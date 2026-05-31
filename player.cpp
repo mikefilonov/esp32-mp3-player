@@ -37,7 +37,7 @@ static RingBufferOutput*    ringOut = nullptr;
 static PlayerEvents*    playerEvents  = nullptr;
 static volatile bool    bt_connected  = false;
 static bool             paused        = false;
-static volatile uint8_t currentVolume = 127; // synced via playerUpdateVolume
+static volatile uint8_t currentVolume = 64; // initialized to mid-range (50%) to prevent startup jumps
 
 // ── A2DP data callback — runs on BT task, must not block ─────────────────────
 static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
