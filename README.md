@@ -2,6 +2,8 @@
 
 An elegant, robust, and feature-rich ESP32-based MP3 player that functions as a **Bluetooth A2DP Source (Transmitter)**. It reads MP3 files from an SD card and streams them to your Bluetooth speaker or headphones, with advanced two-way hardware volume control, absolute volume synchronization, smart SD card hot-swapping, dynamic physical controls, and a multi-color status NeoPixel indicator.
 
+<img width="4032" height="3024" alt="IMG_1467" src="https://github.com/user-attachments/assets/90d8d17b-fb94-4b09-8547-4d11cdcd1ab0" />
+
 ---
 
 ## 🌟 Features
