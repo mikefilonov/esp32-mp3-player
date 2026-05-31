@@ -93,4 +93,12 @@ void navigationSetLedColor(uint8_t r, uint8_t g, uint8_t b) {
   }
 }
 
+bool navigationIsButtonPressed() {
+  if (ss_ok) {
+    return !ss.digitalRead(SS_SWITCH);
+  }
+  return false;
+}
+
+
 

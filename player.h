@@ -11,7 +11,7 @@ class PlayerEvents {
     virtual void onBTDisconnected() = 0;
 };
 
-void playerInit(PlayerEvents* events);
+bool playerInit(PlayerEvents* events, bool pairingModeRequested);
 void playerStart(std::vector<const char *> names); // call after all BT callbacks are registered
 void playerLoop();
 

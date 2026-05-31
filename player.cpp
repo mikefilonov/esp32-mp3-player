@@ -1,6 +1,7 @@
 #include "player.h"
 #include <Arduino.h>
 
+
 // ── Ring buffer ───────────────────────────────────────────────────────────────
 #define RING_BUF_SAMPLES 8192
 static int16_t  ring[RING_BUF_SAMPLES];
@@ -64,15 +65,25 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
-void playerInit(PlayerEvents* events) {
+bool playerInit(PlayerEvents* events, bool pairingModeRequested) {
   playerEvents = events;
-
-  a2dp_source.set_auto_reconnect(true);
 
   a2dp_source.set_data_callback_in_frames(get_sound_data);
 
+  a2dp_source.set_auto_reconnect(true);
+  a2dp_source.get_last_connection();
 
-  a2dp_source.clean_last_connection();
+  bool noLastConnection = !a2dp_source.has_last_connection();
+  bool activePairing = pairingModeRequested || noLastConnection;
+
+  if (noLastConnection) {
+    Serial.println("[player] No connection history found — entering pairing mode by default.");
+  }
+
+  if (pairingModeRequested) {
+    Serial.println("[player] Pairing requested on boot — clearing last paired device to allow new pairing.");
+    a2dp_source.clean_last_connection();
+  }
 
   a2dp_source.set_on_connection_state_changed([](esp_a2d_connection_state_t state, void*) {
     if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
@@ -85,6 +96,8 @@ void playerInit(PlayerEvents* events) {
       if (playerEvents) playerEvents->onBTDisconnected();
     }
   });
+
+  return activePairing;
 }
 
 void playerStart(std::vector<const char *> names) {
