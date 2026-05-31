@@ -21,7 +21,7 @@
 #include "nvs_flash.h"
 
 // Set to 1 to enable Serial diagnostics & plotter telemetry, or 0 to completely disable both
-#define ENABLE_DIAGNOSTICS 1
+#define ENABLE_DIAGNOSTICS 0
 
 #include "sdcard.h"
 #include "player.h"

@@ -22,13 +22,24 @@
 
 
 // ── Ring buffer ───────────────────────────────────────────────────────────────
-#define RING_BUF_SAMPLES 4096
+#define RING_BUF_SAMPLES 8192
+#define RING_BUF_MASK    (RING_BUF_SAMPLES - 1)
 static int16_t  ring[RING_BUF_SAMPLES];
 static volatile int ring_write = 0;
 static volatile int ring_read  = 0;
 
 static inline int ring_available() {
-  return (ring_write - ring_read + RING_BUF_SAMPLES) % RING_BUF_SAMPLES;
+  return (ring_write - ring_read + RING_BUF_SAMPLES) & RING_BUF_MASK;
+}
+
+static inline int ring_free_space() {
+  int r = ring_read;
+  int w = ring_write;
+  if (r > w) {
+    return r - w - 2;
+  } else {
+    return r - w - 2 + RING_BUF_SAMPLES;
+  }
 }
 
 // ── Custom AudioOutput that writes decoded samples into the ring buffer ───────
@@ -38,10 +49,10 @@ public:
   bool stop()  override { return true; }
 
   bool ConsumeSample(int16_t sample[2]) override {
-    int next_w = (ring_write + 2) % RING_BUF_SAMPLES;
-    if (next_w == ring_read) return false; // full
-    ring[ring_write]                          = sample[0];
-    ring[(ring_write + 1) % RING_BUF_SAMPLES] = sample[1];
+    int next_w = (ring_write + 2) & RING_BUF_MASK;
+    if (next_w == ring_read) return false; // full (safety fallback)
+    ring[ring_write]                        = sample[0];
+    ring[(ring_write + 1) & RING_BUF_MASK]  = sample[1];
     ring_write = next_w;
     return true;
   }
@@ -72,8 +83,8 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
 
   for (int i = 0; i < to_send; i++) {
     frames[i].channel1 = ring[ring_read];
-    frames[i].channel2 = ring[(ring_read + 1) % RING_BUF_SAMPLES];
-    ring_read = (ring_read + 2) % RING_BUF_SAMPLES;
+    frames[i].channel2 = ring[(ring_read + 1) & RING_BUF_MASK];
+    ring_read = (ring_read + 2) & RING_BUF_MASK;
   }
   // No PCM scaling — volume is handled entirely by the device's hardware DAC.
 
@@ -145,9 +156,10 @@ void playerStart() {
 
 void playerLoop() {
   if (mp3 && mp3->isRunning()) {
-    // Fill the ring buffer to maximum capacity in a single pass to absorb system latencies.
-    // We keep decoding as long as there is space for more samples in the buffer.
-    while (ring_available() < RING_BUF_SAMPLES - 512) {
+    // Fill the ring buffer. We decode as long as there is space for at least one
+    // full MP3 frame (typically 1152 stereo frames = 2304 samples).
+    // This ensures ConsumeSample will never block under normal operation.
+    while (ring_free_space() >= 2304) {
       if (!mp3->loop()) {
         mp3->stop();
         Serial.println("[player] track finished");
