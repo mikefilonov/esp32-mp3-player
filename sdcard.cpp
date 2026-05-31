@@ -45,6 +45,10 @@ bool sdCheckConnection() {
 }
 
 bool sdFindNextFile(char* out, size_t maxLen, const char* currentFile, bool backwards) {
+  if (!sdCheckConnection()) {
+    return false;
+  }
+
   bool fileFound = false;
   bool rewindDone = false;
   char prevFile[256] = {0};
