@@ -12,7 +12,7 @@ class PlayerEvents {
 };
 
 bool playerInit(PlayerEvents* events, bool pairingModeRequested);
-void playerStart(std::vector<const char *> names); // call after all BT callbacks are registered
+void playerStart(); // call after all BT callbacks are registered
 void playerLoop();
 
 void playerStartFile(const char* path);

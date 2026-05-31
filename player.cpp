@@ -64,11 +64,21 @@ static int32_t get_sound_data(Frame* frames, int32_t num_frames) {
   return num_frames;
 }
 
+static bool filter_devices(const char* ssid, esp_bd_addr_t address, int rssi) {
+  Serial.printf("[player] Scanned compatible BT device: %s, RSSI: %d\n", ssid ? ssid : "(null)", rssi);
+  if (ssid && strlen(ssid) > 0) {
+    Serial.printf("[player] Connecting to discovered speaker: %s\n", ssid);
+    return true; // Accept this device
+  }
+  return false;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 bool playerInit(PlayerEvents* events, bool pairingModeRequested) {
   playerEvents = events;
 
   a2dp_source.set_data_callback_in_frames(get_sound_data);
+  a2dp_source.set_ssid_callback(filter_devices);
 
   a2dp_source.set_auto_reconnect(true);
   a2dp_source.get_last_connection();
@@ -100,8 +110,8 @@ bool playerInit(PlayerEvents* events, bool pairingModeRequested) {
   return activePairing;
 }
 
-void playerStart(std::vector<const char *> names) {
-  a2dp_source.start(names);
+void playerStart() {
+  a2dp_source.start();
   Serial.println("[player] A2DP started");
 }
 

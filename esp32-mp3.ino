@@ -25,8 +25,6 @@ void setup() {
   while (!Serial) delay(10); // Wait for serial port to connect
   audioLogger = &Serial;
 
-  std::vector<const char*> btNames = {"Beats Solo 4", "Headphones 01", "RX-V385 Yamaha", "NR-103"};
-
   // needed for bt last connection read
   esp_err_t err = nvs_flash_init();
   if (err != ESP_OK) {
@@ -44,12 +42,10 @@ void setup() {
     Serial.println("[setup] Normal boot mode — Setting NeoPixel to Blue");
     navigationSetLedColor(0, 0, 255);       // Blue for Normal Boot (reconnecting)
   }
-
   nvs_flash_deinit();
   btNavigationSetup(getA2DPSource(), &ctr); // register AVRC callback before start
 
-  // deinit before playerStart
-  playerStart(btNames);                     // now start BT with all callbacks in place
+  playerStart();                            // now start BT with generic open pairing
 }
 
 void loop() {
