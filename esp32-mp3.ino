@@ -21,6 +21,7 @@
 #include "nvs_flash.h"
 
 // Set to 1 to enable Serial diagnostics & plotter telemetry, or 0 to completely disable both
+// (Disabled to prevent Serial print operations from blocking/starving the real-time audio pipeline)
 #define ENABLE_DIAGNOSTICS 0
 
 #include "sdcard.h"
@@ -33,7 +34,8 @@ Mp3PlayerController ctr;
 
 void setup() {
 #if ENABLE_DIAGNOSTICS
-  Serial.begin(9600);
+  // Changed to 115200 baud to speed up serial output and prevent buffer blocking
+  Serial.begin(115200);
   while (!Serial) delay(10); // Wait for serial port to connect
   audioLogger = &Serial;
 #endif
