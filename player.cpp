@@ -18,6 +18,7 @@
 
 #include "player.h"
 #include "esp_a2dp_api.h"
+#include "esp_avrc_api.h"
 #include <Arduino.h>
 #include <Preferences.h>
 
@@ -68,7 +69,8 @@ public:
   bool SetRate(int hz) override {
     file_hz = hz;
     ratio = (float)hz / 44100.0f;
-    // Pre-calculate inverse ratio to replace slow divisions in ConsumeSample with multiplications
+    // Pre-calculate inverse ratio to replace slow divisions in ConsumeSample
+    // with multiplications
     inv_ratio = ratio > 0.0f ? 1.0f / ratio : 1.0f;
     resample_phase = 0.0f;
     return AudioOutput::SetRate(hz);
@@ -89,7 +91,8 @@ public:
     }
 
     // Linear resampler: convert from file_hz to 44100 Hz (causal push model)
-    // Interpolates between previous and current sample to prevent high-frequency noise.
+    // Interpolates between previous and current sample to prevent
+    // high-frequency noise.
     bool success = true;
     while (resample_phase < 1.0f) {
       int next_w = (ring_write + 2) & RING_BUF_MASK;
@@ -134,6 +137,7 @@ static volatile uint8_t currentVolume =
     64; // initialized to mid-range (50%) to prevent startup jumps
 static Preferences preferences;
 static bool volumeSyncedToSpeaker = false;
+static bool in_player_set_volume = false;
 
 // ── A2DP data callback — runs on BT task, must not block ─────────────────────
 static int32_t get_sound_data(Frame *frames, int32_t num_frames) {
@@ -287,14 +291,20 @@ void playerStartFile(const char *path) {
 }
 
 void playerStop() {
+  bool was_running = (mp3 != nullptr && mp3->isRunning());
+
   paused = true;
   delay(30); // Wait for the Bluetooth thread to exit get_sound_data and enter
              // paused state
 
-  // Send A2DP SUSPEND command to tell the speaker to pause its clock recovery
-  // during transitions. This prevents the speaker from drifting on packet jitter.
-  esp_a2d_media_ctrl(ESP_A2D_MEDIA_CTRL_SUSPEND);
-  delay(50); // Give the BT stack a brief moment to transmit the SUSPEND packet
+  if (was_running) {
+    // Send A2DP SUSPEND command to tell the speaker to pause its clock recovery
+    // during transitions. This prevents the speaker from drifting on packet
+    // jitter.
+    esp_a2d_media_ctrl(ESP_A2D_MEDIA_CTRL_SUSPEND);
+    delay(
+        50); // Give the BT stack a brief moment to transmit the SUSPEND packet
+  }
 
   if (mp3) {
     if (mp3->isRunning())
@@ -318,7 +328,10 @@ void playerStop() {
 void playerPause(bool p) {
   paused = p;
   // Sync the Bluetooth A2DP stream state with the playback pause state
-  esp_a2d_media_ctrl(p ? ESP_A2D_MEDIA_CTRL_SUSPEND : ESP_A2D_MEDIA_CTRL_START);
+  if (mp3 && mp3->isRunning()) {
+    esp_a2d_media_ctrl(p ? ESP_A2D_MEDIA_CTRL_SUSPEND
+                         : ESP_A2D_MEDIA_CTRL_START);
+  }
   Serial.printf("[player] %s\n", p ? "paused" : "resumed");
 }
 
@@ -338,33 +351,55 @@ static void saveVolumeToNVS(uint8_t vol) {
 // Called by bt_navigation when the device reports a volume change.
 // Just tracks the value so the controller can read it for Up/Down increments.
 void playerUpdateVolume(uint8_t volume_0_127) {
+  // Prevent infinite recursive loops from our own local set_volume calls
+  if (in_player_set_volume)
+    return;
+
   if (!volumeSyncedToSpeaker) {
     // Ignore initial speaker volume reports until we successfully push our NVS
-    // restored volume
-    Serial.printf("[player] Ignored initial speaker volume report of %d to "
-                  "protect NVS restored state\n",
-                  volume_0_127);
+    // restored volume. We trigger the push now because the speaker sending us
+    // its volume means the AVRCP connection is fully ready.
+    Serial.printf("[player] Ignored initial speaker volume report of %d, "
+                  "pushing NVS restored volume %d\n",
+                  volume_0_127, currentVolume);
+    playerSetVolume(currentVolume);
     return;
   }
   if (currentVolume != volume_0_127) {
     currentVolume = volume_0_127;
+    in_player_set_volume = true;
+    a2dp_source.set_volume(volume_0_127);
+    in_player_set_volume = false;
     saveVolumeToNVS(volume_0_127);
   }
 }
+
+static uint8_t volume_tl = 0;
 
 // Called by physical buttons via the controller.
 // Sends an AVRC "set absolute volume" command to the device — the device's
 // hardware DAC applies it. No PCM scaling on our side.
 void playerSetVolume(uint8_t volume_0_127) {
+  in_player_set_volume = true;
+
   if (currentVolume != volume_0_127 || !volumeSyncedToSpeaker) {
     currentVolume = volume_0_127;
     saveVolumeToNVS(volume_0_127);
   }
-  esp_avrc_ct_send_set_absolute_volume_cmd(1 /*TL_RN_VOLUME_CHANGE*/,
-                                           volume_0_127);
+  a2dp_source.set_volume(volume_0_127);
+
+  // Use a rolling transaction label (0-15) to prevent command collisions when
+  // rotating the knob rapidly
+  uint8_t tl = volume_tl++ & 0x0f;
+  esp_err_t err = esp_avrc_ct_send_set_absolute_volume_cmd(tl, volume_0_127);
+
   volumeSyncedToSpeaker =
       true; // We successfully synchronized our NVS volume to the speaker!
-  Serial.printf("[player] set volume: %d\n", volume_0_127);
+
+  in_player_set_volume = false;
+
+  Serial.printf("[player] set volume: %d (TL: %d, status: %d)\n", volume_0_127,
+                tl, err);
 }
 
 uint8_t playerGetVolume() { return currentVolume; }

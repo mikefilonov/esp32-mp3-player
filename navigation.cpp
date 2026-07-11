@@ -67,7 +67,7 @@ void navigationSetup() {
   Serial.println("[navigation] setup done");
 }
 
-void navigationLoop(NavigationController* ctr) {
+void navigationLoop(NavigationController* ctr, bool flipKnob) {
   if (!ss_ok) return;
 
   // Exit instantly if Seesaw INT pin is HIGH (no physical movement/interaction)
@@ -84,26 +84,36 @@ void navigationLoop(NavigationController* ctr) {
   int32_t delta = newPos - lastSeesawPos;
   
   if (delta != 0) {
-    if (isPressed) {
-      // Chorded action: holding button + rotating = track skip
+    bool useTrackAction = isPressed;
+    if (flipKnob) {
+      useTrackAction = !isPressed;
+    }
+
+    if (useTrackAction) {
+      // track skip action
       if (delta > 0) {
-        Serial.println("[navigation] Seesaw chorded next");
+        Serial.println("[navigation] Seesaw next track");
         ctr->onRightButtonPress();
       } else {
-        Serial.println("[navigation] Seesaw chorded prev");
+        Serial.println("[navigation] Seesaw prev track");
         ctr->onLeftButtonPress();
       }
-      wasRotatedWhilePressed = true;
     } else {
-      // Normal action: just rotating = volume control
+      // volume control action
       int32_t ticks = abs(delta);
       for (int32_t i = 0; i < ticks; i++) {
         if (delta > 0) {
+          Serial.println("[navigation] Seesaw volume up");
           ctr->onUpButtonPress();
         } else {
+          Serial.println("[navigation] Seesaw volume down");
           ctr->onDownButtonPress();
         }
       }
+    }
+
+    if (isPressed) {
+      wasRotatedWhilePressed = true;
     }
     lastSeesawPos = newPos;
   }

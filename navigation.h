@@ -31,7 +31,7 @@ class NavigationController {
 };
 
 void navigationSetup();
-void navigationLoop(NavigationController* ctr);
+void navigationLoop(NavigationController* ctr, bool flipKnob = false);
 void navigationSetLedColor(uint8_t r, uint8_t g, uint8_t b);
 bool navigationIsButtonPressed();
 
