@@ -28,7 +28,7 @@
 // Flip knob behavior: if 1, knob rotation changes track, and rotation while
 // pressed changes volume. If 0 (default), knob rotation changes volume, and
 // rotation while pressed changes track.
-#define FLIP_KNOB_BEHAVIOR 0
+#define FLIP_KNOB_BEHAVIOR 1
 
 #include "bt_navigation.h"
 #include "controller.h"

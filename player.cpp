@@ -183,6 +183,12 @@ bool playerInit(PlayerEvents *events, bool pairingModeRequested) {
   a2dp_source.set_ssid_callback(filter_devices);
 
   a2dp_source.set_auto_reconnect(true);
+  // NOTE: get_last_connection() will fail/return false in newer versions of the ESP32-A2DP library
+  // because is_autoreconnect_allowed is default-initialized to false and only set to true during start().
+  // Manual Patch 1: inside ESP32-A2DP's BluetoothA2DPCommon::get_last_connection(), change the check
+  // `if (is_autoreconnect_allowed)` to `if (reconnect_status == AutoReconnect)`.
+  // Manual Patch 2: in BluetoothA2DPCommon.h, move get_last_connection(), has_last_connection(),
+  // and clean_last_connection() from the protected: section to the public: section to allow API calls.
   a2dp_source.get_last_connection();
 
   // Restore volume from NVS preferences
